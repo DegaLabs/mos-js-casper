@@ -5,7 +5,7 @@ const {
     CLPublicKey,
     RuntimeArgs,
     CLValueBuilder,
-    CLValueParsers} = CaspSDK
+    CLValueParsers } = CaspSDK
 const {
     utils,
     helpers,
@@ -14,7 +14,6 @@ const {
 const { ERC20Client } = require('casper-erc20-js-client')
 const axios = require('axios')
 const { contractSimpleGetter } = helpers;
-
 
 const MOSJS = class {
     constructor() { }
@@ -169,10 +168,15 @@ const MOSJS = class {
         return deploy
     }
 
-    static async getActiveContractHash(nodeAddress, middlewareAPI, contractPackageHash) {
-        const stateRootHash = await utils.getStateRootHash(nodeAddress);
+    static async getPackageInfo(nodeAddress, middlewareAPI, contractPackageHash, stateRootHash) {
+        stateRootHash = stateRootHash ? stateRootHash : (await utils.getStateRootHash(nodeAddress))
         const data = await axios(`${middlewareAPI}state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
         const packageInfo = data.data.result.stored_value.ContractPackage
+        return packageInfo
+    }
+
+    static async getActiveContractHash(nodeAddress, middlewareAPI, contractPackageHash) {
+        const packageInfo = await MOSJS.getPackageInfo(nodeAddress, middlewareAPI, contractPackageHash)
         const versions = packageInfo.versions
         let lastVersion = {};
         versions.forEach(e => {
@@ -223,6 +227,63 @@ const MOSJS = class {
 
     static toCasperSignedMessage(message) {
         return Uint8Array.from(Buffer.from(`Casper Message:\n` + message))
+    }
+
+    static async getNFTIdentifierMode({ nodeAddress, contractPackageHash, networkName, middlewareAPI }) {
+        const stateRootHash = await utils.getStateRootHash(nodeAddress)
+        let data = await axios(`${middlewareAPI}state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
+        data = data.data.result.stored_value
+        let namedKeys = []
+        let entryPoints = []
+        let retPackageHash = ''
+        let retContractHashes = []
+        if (data.Contract) {
+            // contractPackageHash is actually a contract hash
+            const contractInfo = data.Contract
+            retPackageHash = contractInfo.contract_package_hash.substring("contract-package-wasm".length)
+            namedKeys = contractInfo.named_keys
+            entryPoints = contractInfo.entry_points
+            retContractHashes.push(contractPackageHash)
+        } else {
+            const packageInfo = data.ContractPackage
+            const versions = packageInfo.versions
+            let lastVersion = {}
+            versions.forEach(e => {
+                if (!lastVersion.contract_version || e.contract_version > lastVersion.contract_version) {
+                    lastVersion = e
+                }
+                retContractHashes.push(e.contract_hash.substring("contract-".length))
+            })
+            retPackageHash = contractPackageHash
+            const activeContractHash = lastVersion.contract_hash.substring("contract-".length)
+            let activeContractData = await axios(`${middlewareAPI}state_root_hash=${stateRootHash}&key=hash-${activeContractHash}`)
+            activeContractData = activeContractData.data.result.stored_value.Contract
+            namedKeys = activeContractData.named_keys
+            entryPoints = activeContractData.entry_points
+        }
+
+        // first search if there is named key identifier_mode
+        const identifierModeItem = namedKeys.find((e) => {
+            return e.name == `identifier_mode`
+        })
+        let identifierMode = 0
+        if (identifierModeItem) {
+            const im = await contractSimpleGetter(nodeAddress, retContractHashes[retContractHashes.length - 1], ["identifier_mode"])
+            identifierMode = im.toNumber()
+        } else {
+            const entryPointTransfer = entryPoints.find(e => e.name == "transfer")
+            const arg = entryPointTransfer.args.find(e => e.name == "token_ids")
+            identifierMode = arg.cl_type.List == 'String' ? 3 : 2
+        }
+
+        return {
+            namedKeys, 
+            entryPoints,
+            contractPackageHash: retPackageHash,
+            contractHashes: retContractHashes,
+            networkName,
+            identifierMode
+        }
     }
 }
 
