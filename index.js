@@ -1,6 +1,8 @@
 const CaspSDK = require("casper-js-sdk")
 const blake = require("blakejs")
-
+const secp256k1 = require('ethereum-cryptography/secp256k1')
+const { sha256 } = require('ethereum-cryptography/sha256')
+const nacl = require('tweetnacl-ts')
 const {
     CLPublicKey,
     RuntimeArgs,
@@ -13,6 +15,7 @@ const {
 } = require("casper-js-client-helper");
 const { ERC20Client } = require('casper-erc20-js-client')
 const axios = require('axios')
+const { default: BigNumber } = require("bignumber.js")
 const { contractSimpleGetter } = helpers;
 
 const MOSJS = class {
@@ -28,6 +31,7 @@ const MOSJS = class {
         instance.namedKeysList = [
             "contract_owner",
             "market_fee",
+            "payment_token"
         ];
 
         instance.contractPackageHash = contractPackageHash;
@@ -36,7 +40,11 @@ const MOSJS = class {
         instance.contractClient.contractPackageHash = instance.contractPackageHash
         instance.contractClient.nodeAddress = instance.nodeAddress
         instance.namedKeys = instance.namedKeysList;
-
+        const paymentTokenContractPackageHash = await contractSimpleGetter(instance.nodeAddress, instance.contractHash, ["payment_token"])
+        instance.paymentToken = Buffer.from(paymentTokenContractPackageHash.data).toString('hex')
+        instance.paymentTokenContractHash = await MOSJS.getActiveContractHash(nodeAddress, middlewareAPI, instance.paymentToken)
+        instance.paymentTokenContract = await new ERC20Client(nodeAddress, networkName, '')
+        await instance.paymentTokenContract.setContractHash(`hash-${instance.paymentTokenContractHash}`)
         return instance
     }
 
@@ -272,18 +280,102 @@ const MOSJS = class {
             identifierMode = im.toNumber()
         } else {
             const entryPointTransfer = entryPoints.find(e => e.name == "transfer")
+            console.log('entryPointTransfer', entryPointTransfer)
             const arg = entryPointTransfer.args.find(e => e.name == "token_ids")
             identifierMode = arg.cl_type.List == 'String' ? 3 : 2
         }
 
         return {
-            namedKeys, 
+            namedKeys,
             entryPoints,
             contractPackageHash: retPackageHash,
             contractHashes: retContractHashes,
             networkName,
             identifierMode
         }
+    }
+
+    static isOrderSignatureValid({
+        identifierMode,
+        tokenIdentifier,
+        nftPackageHash, // hex
+        ownerPublicKey, // hex
+        price,  // string
+        isBid,
+        expired,
+        salt,
+        networkName,
+        signature
+    }) {
+        //verify signature
+        const orderHash = Buffer.from(MOSJS.computeOrderHash({
+            identifierMode,
+            tokenIdentifier,
+            nftPackageHash,
+            ownerPublicKey,
+            price,
+            isBid,
+            expired,
+            salt,
+            networkName
+        })).toString('hex')
+
+        let verifyResult = false
+        const msg = MOSJS.toCasperSignedMessage(orderHash)
+        const signatureRaw = Uint8Array.from(Buffer.from(signature, 'hex'))
+        const publicKeyCL = CaspSDK.CLPublicKey.fromHex(ownerPublicKey)
+        if (publicKeyCL.isEd25519()) {
+            verifyResult = nacl.sign_detached_verify(msg, signatureRaw, publicKeyCL.value());
+        } else {
+            verifyResult = secp256k1.ecdsaVerify(
+                signatureRaw,
+                sha256(Buffer.from(msg)),
+                publicKeyCL.value()
+            );
+        }
+        return verifyResult
+    }
+
+    async isOrderAcceptable({
+        identifierMode,
+        tokenIdentifier,
+        nftPackageHash, // hex
+        ownerPublicKey, // hex
+        price,  // string
+        isBid,
+        expired,
+        salt,
+        networkName,
+        signature,  // hex
+    }) {
+        // first, check if signature valid
+        if (!MOSJS.isOrderSignatureValid({ identifierMode, tokenIdentifier, nftPackageHash, ownerPublicKey, price, isBid, expired, salt, signature, networkName })) {
+            return { error: "invalid signature" }
+        }
+        if (expired < Date.now()) {
+            return { error: "expired" }
+        }
+
+        // check if payment token or nft approved
+        if (isBid) {
+            // check whether the owner already approved payment token for market place
+            try {
+                const allowance = await this.paymentTokenContract.allowances(
+                    CLPublicKey.fromHex(ownerPublicKey),
+                    new CaspSDK.CLByteArray(Uint8Array.from(Buffer.from(this.contractPackageHash, 'hex')))
+                );
+                if (new BigNumber(allowance).comparedTo(price) < 0) {
+                    return { error: "insufficient allowance" }
+                }
+            } catch (e) {
+                return { error: "not approved for payment token" }
+            }
+        } else {
+
+        }
+
+        // valid
+        return null
     }
 }
 
