@@ -1,22 +1,13 @@
-const CaspSDK = require("casper-js-sdk")
-const blake = require("blakejs")
-const secp256k1 = require('ethereum-cryptography/secp256k1')
-const { sha256 } = require('ethereum-cryptography/sha256')
-const nacl = require('tweetnacl-ts')
-const {
-    CLPublicKey,
-    RuntimeArgs,
-    CLValueBuilder,
-    CLValueParsers } = CaspSDK
-const {
-    utils,
-    helpers,
-    CasperContractClient,
-} = require("casper-js-client-helper");
-const { ERC20Client } = require('casper-erc20-js-client')
-const axios = require('axios')
-const { default: BigNumber } = require("bignumber.js")
-const { contractSimpleGetter } = helpers;
+import blake from 'blakejs'
+import secp256k1 from 'ethereum-cryptography/secp256k1'
+import { sha256 } from 'ethereum-cryptography/sha256'
+import * as nacl from 'tweetnacl-ts'
+import { CLPublicKey, RuntimeArgs, CLValueBuilder, CLValueParsers } from 'casper-js-sdk'
+import { utils, helpers, CasperContractClient } from 'casper-js-client-helper'
+import { ERC20Client } from 'casper-erc20-js-client'
+import axios from 'axios'
+import { BigNumber } from 'bignumber.js'
+const { contractSimpleGetter } = helpers
 
 const MOSJS = class {
     constructor() { }
@@ -379,4 +370,4 @@ const MOSJS = class {
     }
 }
 
-module.exports = { MOSJS }
+export default MOSJS
