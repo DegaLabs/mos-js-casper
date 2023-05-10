@@ -1,5 +1,5 @@
 const CaspSDK = require("casper-js-sdk")
-const blake = require("blakejs")
+const blake2b = require("blake2b")
 const secp256k1 = require('ethereum-cryptography/secp256k1')
 const { sha256 } = require('ethereum-cryptography/sha256')
 const nacl = require('tweetnacl-ts')
@@ -229,7 +229,8 @@ const MOSJS = class {
         ret = [...ret, ...CLValueParsers.toBytes(CLValueBuilder.u32(pubkeyBytes.length))]
         ret = [...ret, ...CLValueParsers.toBytes(CLValueBuilder.string(networkName))]
         ret = [...ret, ...pubkeyBytes]
-        const blaked = blake.blake2b(Uint8Array.from(ret), undefined, 32);
+
+        const blaked = blake2b(32).update(Uint8Array.from(ret)).digest()
         return blaked
     }
 
