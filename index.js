@@ -380,4 +380,4 @@ const MOSJS = class {
     }
 }
 
-export default MOSJS
+module.exports = MOSJS
