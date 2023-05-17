@@ -178,7 +178,7 @@ const MOSJS = class {
 
     static async getPackageInfo(nodeAddress, middlewareAPI, contractPackageHash, stateRootHash) {
         stateRootHash = stateRootHash ? stateRootHash : (await utils.getStateRootHash(nodeAddress))
-        const data = await axios(`${middlewareAPI}state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
+        const data = await axios.get(`${middlewareAPI}state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
         const packageInfo = data.data.result.stored_value.ContractPackage
         return packageInfo
     }
@@ -240,7 +240,7 @@ const MOSJS = class {
 
     static async getNFTIdentifierMode({ nodeAddress, contractPackageHash, networkName, middlewareAPI }) {
         const stateRootHash = await utils.getStateRootHash(nodeAddress)
-        let data = await axios(`${middlewareAPI}?state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
+        let data = await axios.get(`${middlewareAPI}?state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
         data = data.data.result.stored_value
         let namedKeys = []
         let entryPoints = []
@@ -265,7 +265,7 @@ const MOSJS = class {
             })
             retPackageHash = contractPackageHash
             const activeContractHash = lastVersion.contract_hash.substring("contract-".length)
-            let activeContractData = await axios(`${middlewareAPI}?state_root_hash=${stateRootHash}&key=hash-${activeContractHash}`)
+            let activeContractData = await axios.get(`${middlewareAPI}?state_root_hash=${stateRootHash}&key=hash-${activeContractHash}`)
             activeContractData = activeContractData.data.result.stored_value.Contract
             namedKeys = activeContractData.named_keys
             entryPoints = activeContractData.entry_points
