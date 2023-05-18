@@ -93,13 +93,12 @@ const MOSJS = class {
         }
     ) {
         const contractHashAsByteArray = utils.contractHashToByteArray(this.contractHash)
-        const publicKey = CLPublicKey.fromHex(ownerPublicKey)
 
         const runtimeArgs = RuntimeArgs.fromMap({
             modes: CLValueBuilder.list([CLValueBuilder.u64(identifierMode)]),
             token_identifiers: CLValueBuilder.list([CLValueBuilder.string(tokenIdentifier)]),
             nft_package_hashes: CLValueBuilder.list([CLValueBuilder.key(new CaspSDK.CLByteArray(Uint8Array.from(Buffer.from(nftPackageHash, 'hex'))))]),
-            owners: CLValueBuilder.list([CLValueBuilder.key(publicKey)]),
+            owners: CLValueBuilder.list([CLValueBuilder.key(CLPublicKey.fromHex(ownerPublicKey))]),
             prices: CLValueBuilder.list([CLValueBuilder.u256(price)]),
             is_bids: CLValueBuilder.list([CLValueBuilder.bool(isBid)]),
             salts: CLValueBuilder.list([CLValueBuilder.key(new CaspSDK.CLByteArray(Uint8Array.from(Buffer.from(salt, 'hex'))))]),
@@ -110,7 +109,7 @@ const MOSJS = class {
 
         const deploy = CaspSDK.DeployUtil.makeDeploy(
             new CaspSDK.DeployUtil.DeployParams(
-                publicKey,
+                CLPublicKey.fromHex(publicKey),
                 this.chainName,
                 gasPrice,
                 ttl,
@@ -128,6 +127,7 @@ const MOSJS = class {
 
     async acceptOrder(
         {
+            publicKey,
             identifierMode,
             tokenIdentifier,
             nftPackageHash, // hex
@@ -143,13 +143,12 @@ const MOSJS = class {
         }
     ) {
         const contractHashAsByteArray = utils.contractHashToByteArray(this.contractHash)
-        const publicKey = CLPublicKey.fromHex(ownerPublicKey)
 
         const runtimeArgs = RuntimeArgs.fromMap({
             modes: CLValueBuilder.list([CLValueBuilder.u64(identifierMode)]),
             token_identifiers: CLValueBuilder.list([CLValueBuilder.string(tokenIdentifier)]),
             nft_package_hashes: CLValueBuilder.list([CLValueBuilder.key(new CaspSDK.CLByteArray(Uint8Array.from(Buffer.from(nftPackageHash, 'hex'))))]),
-            owners: CLValueBuilder.list([CLValueBuilder.key(publicKey)]),
+            owners: CLValueBuilder.list([CLValueBuilder.key(CLPublicKey.fromHex(ownerPublicKey))]),
             prices: CLValueBuilder.list([CLValueBuilder.u256(price)]),
             is_bids: CLValueBuilder.list([CLValueBuilder.bool(isBid)]),
             salts: CLValueBuilder.list([CLValueBuilder.key(new CaspSDK.CLByteArray(Uint8Array.from(Buffer.from(salt, 'hex'))))]),
@@ -160,7 +159,7 @@ const MOSJS = class {
 
         const deploy = CaspSDK.DeployUtil.makeDeploy(
             new CaspSDK.DeployUtil.DeployParams(
-                publicKey,
+                CLPublicKey.fromHex(publicKey),
                 this.chainName,
                 gasPrice,
                 ttl,
