@@ -227,9 +227,9 @@ const MOSJS = class {
         ret = [...ret, ...Uint8Array.from(Buffer.from(salt, 'hex'))]
         ret = [...ret, ...CLValueParsers.toBytes(CLValueBuilder.u64(expired))]
         ret = [...ret, ...CLValueParsers.toBytes(CLValueBuilder.u32(pubkeyBytes.length))]
-        ret = [...ret, ...CLValueParsers.toBytes(CLValueBuilder.string(networkName))]
         ret = [...ret, ...pubkeyBytes]
-
+        // ret = [...ret, ...CLValueParsers.toBytes(CLValueBuilder.string(networkName))]
+        // console.log('ret', Buffer.from(ret).toString('hex'))
         const blaked = blake2b(32).update(Uint8Array.from(ret)).digest()
         return blaked
     }
