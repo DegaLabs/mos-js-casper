@@ -177,7 +177,7 @@ const MOSJS = class {
 
     static async getPackageInfo(nodeAddress, middlewareAPI, contractPackageHash, stateRootHash) {
         stateRootHash = stateRootHash ? stateRootHash : (await utils.getStateRootHash(nodeAddress))
-        let data = await fetch(`${middlewareAPI}state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
+        let data = await fetch(`${middlewareAPI}?state_root_hash=${stateRootHash}&key=hash-${contractPackageHash}`)
         data = await data.json()
         const packageInfo = data.result.stored_value.ContractPackage
         return packageInfo
