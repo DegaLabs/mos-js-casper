@@ -212,7 +212,7 @@ const MOSJS = class {
         isBid,
         expired,
         salt,
-        networkName = "casper" | "casper-test"
+        networkName = "casper" | "casper-test" | "integration-test"
     }) {
         // first serialize it
         let ret = []
